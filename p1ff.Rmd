@@ -1,0 +1,235 @@
+---
+title: "Project 1"
+author: "Jeffrey (Yi-Hung) Wang"
+date: "2020/2/17"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+**Tortoise and Hare Racing Problem**
+```{r}
+race<-read.csv("C:/Users/User/Desktop/freq/p1/race.csv", header = T)
+```
+
+**1.**
+a. Null: the true mean finishing time is the same for the team
+tortoise and team hare; alternative: the true mean finishing time is not the same for team tortoise and team hare.
+
+Regardless of whether one-sided or two-sided alternative, the size is the same, the only difference is the location of the size; in a one-sided alternative, the region of size is either on the right or on the left, wherein a two-sided alternative size if divided into two parts, one on the right and the other on the left.
+
+In terms of power, a one-sided alternative provides more power by not testing the other direction. As the picture on the second page shows.
+
+
+![Power for One-sided Alternative.](C:/Users/User/Desktop/freq/p1/Rplot01.jpeg)
+
+![Power for Two-sided Alternative.](C:/Users/User/Desktop/freq/p1/Rplot (2).jpeg)
+
+
+b.
+```{r}
+# the mean difference
+dif<-mean(race[,1])-mean(race[,2])
+dif10<-race[,1]-race[,2]
+cat("The difference of mean is ",dif," .")
+```
+c.
+
+Var($\overline{X1}$-$\overline{X2}$) = Var($\overline{X1}$)+Var($\overline{X2}$)\\
+Since Var($\overline{X1}$) = $\sigma^{2}$/N1 and Var($\overline{X2}$) = $\sigma^{2}$/N2, Var($\overline{X1}$-$\overline{X2}$) = $\sigma^{2}$/N1+$\sigma^{2}$/N2 = $\sigma^{2}$(1/N1+1/N2).\\
+Also, $\sigma^{2}$ = S$\underline{pool}$/(1/N1+1/N2).\\ 
+Thus, Var($\overline{X1}$-$\overline{X2}$) = S$\underline{pool}$/(1/N1+1/N2)(1/N1+1/N2), where S$\underline{pool}$ = $S$\underline{1}$^{2}$(N1-1)+$S$\underline{2}$^{2}$(N2-1)/(N1+N2-2).\\ And we can write the equation as this:Var($\overline{X1}$-$\overline{X2}$) = $S$\underline{1}$^{2}$(N1-1)+$S$\underline{2}$^{2}$(N2-1)/(N1+N2-2)*(1/N1+1/N2)
+
+d.
+```{r}
+#Calculate the standard error
+se.squ<-(var(race[,1])*(10-1)+var(race[,2])*(10-1))/(10+10-2)*(1/10+1/10)
+cat("The variance of mean difference euals to ",se.squ,".")
+```
+
+e.
+```{r}
+#i.
+t.sta<-(mean(race[,1])-mean(race[,2]))/sqrt(se.squ)
+pva<-pt(t.sta,18)*2
+
+cat("The t-statistics is", t.sta, "and ")
+cat("the p-value is",pva,".")
+```
+The p value is larger than alpha(which equals to 0.05), thus there is no strong evidence for rejecting the alternative hypothesis. 
+```{r}
+#ii.
+lowerbound<-qt(0.025,18)*sqrt(se.squ)
+upperbound<-qt(0.975,18)*sqrt(se.squ)
+
+cat("The rejection region would be the range of value(difference of mean) less than ",lowerbound,"or larger than",upperbound,".")
+```
+Since 0 is in the 95% confidence interval, thus there is no strong evidence for rejecting the null hyphothesis. 
+
+
+```{r}
+#iii.
+hist(race$Hare,breaks = 20)
+hist(race$Tortoise,col = "skyblue", add = T)
+```
+No, the two-sample t test is not appropriate for this problem. The main reason for that is the data seems not follow the normal distribution.
+
+2.
+a.
+```{r}
+uhare<-utor<-rep(NA,10)
+
+for(i in 1:10){
+  uhare[i]<-sum(race[i,1]<race[1:10,2])
+  utor[i]<-sum(race[i,2]<race[1:10,1])
+}
+
+sum(uhare)
+sum(utor)
+
+#Function that can calculate the U-statistics
+u.function<-function(df){
+  a<-rep(NA,10)
+  for(i in 1:10){
+    a[i]<-sum(df[i,1]<df[1:10,2])
+  }
+return(sum(a))}
+cat("Uhare equals to ",sum(uhare), "and the Utortoise equals to ",sum(utor),".")
+```
+
+b.
+The answer is 50. The null hypothesis is that the number of situations that tortoise wins equals the number of hares. There are 100 races(for each individual) in total, thus the U-statistics for each team should both equal to 100/2, which equals 50.
+
+c.
+```{r}
+#i
+ustat<-(sum(uhare)-50)/sqrt(10*10*(10+10+1)/12)
+pva2<-pnorm(ustat,lower.tail=F)
+
+cat("The U-statistics is", ustat, "and ")
+cat("the p-value is",2*pva2,".")
+```
+#ii
+Since pvalue is larger than 0.05, there is no significant evidence for rejecting the null hypothesis. 
+
+```{r}
+#iii
+wilcox.test(race$Hare,race$Tortoise,alternative = "two.sided",exact = F,correct = F)
+```
+
+In this test, the null hypothesis is rejected under the significance level of 0.05, which is different with the result of t-test in question 1.
+
+3.
+a.
+```{r}
+#Convert the dataframe to a matrix
+vec.race<-as.vector(rbind(race$Hare,race$Tortoise))
+
+#Generate 3000 permutation dataset
+iter=3000
+permutation<-array(NA,dim = c(10,2,iter))
+
+for(i in 1:iter){
+  permutation[,1,i]<-per.hare<-sample(vec.race,10,replace = F)
+  permutation[,2,i]<-per.tor<-setdiff(vec.race,per.hare)
+}
+
+```
+
+b.
+```{r}
+sigmu0<-sqrt(10*10*21/12)
+#Calculate 
+result<-matrix(NA,iter,8)
+
+for(i in 1:iter){
+
+result[i,1]<-mean(permutation[,1,i])-mean(permutation[,2,i])
+result[i,2]<-result[i,1]/sqrt((var(permutation[,1,i])*9+var(permutation[,2,i])*9)/90)
+result[i,3]<-as.numeric(u.function(permutation[,,i]))
+result[i,4]<-100-result[i,3]
+result[i,5]<-(result[i,3]-50)/sigmu0
+result[i,6]<-(result[i,4]-50)/sigmu0
+result[i,7]<-wilcox.test(permutation[,1,i],permutation[,2,i])$statistic
+result[i,8]<-wilcox.test(permutation[,2,i],permutation[,1,i])$statistic
+}
+```
+
+c.
+```{r}
+hist(result[,1], main = "difference of mean")
+aa<-sum(abs(dif)<=abs(result[,1]))/3000
+abline(v = dif, col = 2)
+abline(v = -dif, col = 2)
+cat("The p-value equals ",aa,".")
+```
+
+```{r}
+hist(result[,2],main = "The t-statistics")
+bb<-sum(abs(result[,2])>=abs(t.sta))/iter
+abline(v = t.sta, col = 2)
+abline(v = -t.sta, col = 2)
+cat("The p-value equals ",bb,".")
+```
+
+```{r}
+hist(result[,3],main = "Uhare")
+cc<-sum(result[,3]>=sum(uhare))/iter
+abline(v=sum(uhare),col =2)
+cat("The p-value equals ",cc,".")
+```
+
+```{r}
+hist(result[,4],main = "Utortoise")
+d<-sum(result[,4]<=sum(utor))/iter
+abline(v=sum(utor),col =2)
+cat("The p-value equals ",d,".")
+```
+
+```{r}
+hist(result[,5],main = "Z statistics for hare")
+e<-sum(abs(result[,5])>=abs(ustat))/iter
+abline(v = ustat, col = 2)
+abline(v = -ustat, col = 2)
+cat("The p-value equals ",e,".")
+```
+
+```{r}
+hist(result[,6], main= "Z statistics for tortoise")
+f<-sum(abs(result[,6])>=abs((sum(utor)-50)/sqrt(10*10*(10+10+1)/12)))/iter
+abline(v = abs(((sum(utor)-50)/sqrt(10*10*(10+10+1)/12))), col = 2)
+abline(v = -abs(((sum(utor)-50)/sqrt(10*10*(10+10+1)/12))), col = 2)
+cat("The p-value equals ",f,".")
+```
+
+```{r}
+hist(result[,7],main = "Wilcox Statistics for Team Hare")
+g<-sum(abs(result[,7]>=81))/iter
+abline(v =81, col = 2)
+cat("The p-value equals ",g,".")
+```
+
+```{r}
+hist(result[,8],main = "Wilcox Statistics for Team Tortoise")
+h<-sum(abs(result[,8]<=19))/iter
+abline(v =19, col = 2)
+cat("The p-value equals ",h,".")
+```
+
+Except for the histogram for the mean difference and the one for the t-statistic(they are both symmetric and has two peaks), other histograms seem to be similar: they seem to follow the normal distribution.  Also, the histograms for the t-statistics is a standardized version of the one for the mean difference. The ones for the z-statistics are standardized versions of U-statistics and the Wilcox statistics for each group. 
+
+The mean value for the unstandardized version should be 50 because if we randomly assign the time records for each group, we expect that each group should win half of the games. For the standardized ones, the mean should be 0, because of the process of standardization.
+
+The pvalues are shown as above(under each plot).I calculated the p-values by calculating how likely the simulated result is more extreme than the original data.
+
+For the t-test, the p-value is larger than 0.05, thus the null hypothesis cannot be rejected.The result indicates that we cannot reject the hypothesis that hare and tortoise have different finishing times. But for the other tests, the p-value is less than 0.05, thus the null hypothesis is rejected. And the result indicates that the finishing time of hares and tortoises are different.
+
+4.
+If we use the t-test, we would not reject the null hypothesis, but if we use the Wilcox test, we would reject the null hypothesis instead. The t-test and the Wilcox test are very intuitive, but these two methods require the data to be i.i.d (independent and identically distributed)for the two groups. For the t-test, the data should also follow the normal distribution and the variances should also be the same for each group. However, the bootstrap process does not require the conditions of the two tests.
+
+If we know the real distribution of data, then the t-test is appropriate, if the distribution of data is unknown but the paired observation is random, the Wilcox test is appropriate, if the two information is unknown and the two groups are not independent, then the bootstrap method is appropriate. But for the small sample size, the Wilcox test would be more appropriate than the other two methods. Finally, the bootstrap can only tell us the information in the sample and cannot tell us the information about the population, when the goal is to know better about the population, bootstrap might not be more appropriate than the other two tests.
+
+
+
+
